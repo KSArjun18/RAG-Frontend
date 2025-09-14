@@ -30,38 +30,44 @@ function App() {
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim() || !sessionId || isLoading) return;
+const handleSendMessage = async () => {
+  if (!inputMessage.trim() || !sessionId || isLoading) return;
 
-    const userMessage = { role: 'user', content: inputMessage };
-    setMessages(prev => [...prev, userMessage]);
-    setInputMessage('');
-    setIsLoading(true);
+  const userMessage = { role: 'user', content: inputMessage };
+  setMessages(prev => [...prev, userMessage]);
+  setInputMessage('');
+  setIsLoading(true);
 
-    try {
-      const answer = await sendMessage(sessionId, inputMessage);
+  try {
+    const answer = await sendMessage(sessionId, inputMessage);
 
-      const assistantMessage = { role: 'assistant', content: '' };
-      setMessages(prev => [...prev, assistantMessage]);
+    const assistantMessage = { role: 'assistant', content: '' };
+    setMessages(prev => [...prev, assistantMessage]);
 
-      const words = answer.split(' ');
-      let currentText = '';
-      for (let i = 0; i < words.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, 50));
-        currentText += words[i] + ' ';
-        setMessages(prev => prev.map((msg, index) =>
-          index === prev.length - 1 ? { ...msg, content: currentText } : msg
-        ));
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
-      setMessages(prev => [...prev,
-        { role: 'assistant', content: 'Sorry, I encountered an error processing your request.' }
-      ]);
-    } finally {
-      setIsLoading(false);
+    const words = answer.split(' ');
+    for (let i = 0; i < words.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // build partial message directly instead of relying on currentText
+      const partialText = words.slice(0, i + 1).join(' ') + ' ';
+
+      setMessages(prev =>
+        prev.map((msg, index) =>
+          index === prev.length - 1 ? { ...msg, content: partialText } : msg
+        )
+      );
     }
-  };
+  } catch (error) {
+    console.error('Error sending message:', error);
+    setMessages(prev => [
+      ...prev,
+      { role: 'assistant', content: 'Sorry, I encountered an error processing your request.' }
+    ]);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleResetSession = async () => {
     if (sessionId) await resetSessionHistory(sessionId);
